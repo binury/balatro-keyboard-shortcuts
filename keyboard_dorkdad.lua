@@ -170,6 +170,8 @@ end
 function ranked_hands(cards)
   local fives, fours, trips, twos = {}, {}, {}, {}
   local rank_counts = {}
+  local four_fingers = next(find_joker('Four Fingers'))
+
   for i, card in pairs(cards) do
     local rank = get_visible_rank(card)
     if not (rank == "stone") then
@@ -228,14 +230,17 @@ function ranked_hands(cards)
     straight = {}
     for j = i, i+4 do
       actual_rank = j
-      if j == 1 then actual_rank = 14 end -- handle the wheel
-        if not rank_counts[actual_rank] then
-            has_straight = 0
-            break
-        else 
-           table.insert(straight, rank_counts[actual_rank][1])
-        end
+      if j == 1 then actual_rank = 14 end -- handle The Wheel blind
+      if rank_counts[actual_rank] then
+        table.insert(straight, rank_counts[actual_rank][1])
+      elseif (four_fingers and rank_counts[actual_rank - 1]) then
+        table.insert(straight, rank_counts[actual_rank - 1][1])
+      else
+        has_straight = 0
+        break
+      end
     end
+
     if has_straight == 1 then
         table.insert(straights, straight)
     end
@@ -246,6 +251,9 @@ function ranked_hands(cards)
     cards = sorted_cards_by_suit(suits[i])
     if #cards >= 5 then
       table.insert(flushes, take(cards, 5))
+    end
+    if four_fingers and #cards == 4 then
+      table.insert(flushes, take(cards, 4))
     end
   end
 
@@ -434,7 +442,8 @@ end
 function flush(suit)
     G.hand:unhighlight_all()
 
-    cards = sorted_cards_by_suit(suit)
+  local cards = sorted_cards_by_suit(suit)
+  local four_fingers = next(find_joker('Four Fingers'))
 
     if #cards >= 5 then
         cards = take(cards, 5)
